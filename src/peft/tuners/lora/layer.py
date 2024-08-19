@@ -123,12 +123,13 @@ class LoraLayer(BaseTunerLayer):
             self.scaling[adapter_name] = lora_alpha / math.sqrt(r)
         else:
             self.scaling[adapter_name] = lora_alpha / r
-
+        print(self.lora_A[adapter_name].weight.data)
         mask_percentage = 60
         mask_A = (torch.rand(self.in_features, r) > mask_percentage / 100).float()
         mask_B = (torch.rand(r, self.out_features) > mask_percentage / 100).float()
         self.lora_A[adapter_name].weight.data *= mask_A.to(self.lora_A[adapter_name].weight.device)
         self.lora_B[adapter_name].weight.data *= mask_B.to(self.lora_B[adapter_name].weight.device)
+        print(self.lora_A[adapter_name].weight.data)
 
         # for inits that require access to the base weight, use gather_param_ctx so that the weight is gathered when using DeepSpeed
         if isinstance(init_lora_weights, str) and init_lora_weights.startswith("pissa"):
