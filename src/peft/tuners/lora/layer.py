@@ -29,6 +29,8 @@ from peft.utils.other import transpose
 
 from .config import LoraConfig
 from .dora import DoraConv2dLayer, DoraLinearLayer
+torch.cuda.manual_seed_all(42)
+torch.manual_seed(42)
 
 
 class LoraLayer(BaseTunerLayer):
@@ -56,6 +58,8 @@ class LoraLayer(BaseTunerLayer):
         self._caches: dict[str, Any] = {}
         self.ephemeral_gpu_offload: bool = ephemeral_gpu_offload
         self.kwargs = kwargs
+        self.mask_A = {} 
+        self.mask_B = {}
 
         base_layer = self.get_base_layer()
         if isinstance(base_layer, nn.Linear):
@@ -121,6 +125,12 @@ class LoraLayer(BaseTunerLayer):
             self.scaling[adapter_name] = lora_alpha / math.sqrt(r)
         else:
             self.scaling[adapter_name] = lora_alpha / r
+
+        mask_percentage = 60
+        mask_A = (torch.rand(self.in_features, r) > mask_percentage / 100).float()
+        mask_B = (torch.rand(r, self.out_features) > mask_percentage / 100).float()
+        self.lora_A[adapter_name].weight.data *= mask_A[adapter_name].to(self.lora_A[adapter_name].weight.device)
+        self.lora_B[adapter_name].weight.data *= mask_B[adapter_name].to(self.lora_B[adapter_name].weight.device)
 
         # for inits that require access to the base weight, use gather_param_ctx so that the weight is gathered when using DeepSpeed
         if isinstance(init_lora_weights, str) and init_lora_weights.startswith("pissa"):
@@ -546,11 +556,17 @@ class Linear(nn.Module, LoraLayer):
             for active_adapter in self.active_adapters:
                 if active_adapter not in self.lora_A.keys():
                     continue
+                mask_A = (torch.rand(self.in_features, r) > mask_percentage / 100).float()
+                mask_B = (torch.rand(r, self.out_features) > mask_percentage / 100).float()
+                self.lora_A[active_adapter].weight.data *= mask_A[adapter_name].to(self.lora_A[adapter_name].weight.device)
+                self.lora_B[active_adapter].weight.data *= mask_B[adapter_name].to(self.lora_B[adapter_name].weight.device)
+                
                 lora_A = self.lora_A[active_adapter]
                 lora_B = self.lora_B[active_adapter]
                 dropout = self.lora_dropout[active_adapter]
                 scaling = self.scaling[active_adapter]
                 x = x.to(lora_A.weight.dtype)
+                
 
                 if not self.use_dora[active_adapter]:
                     result = result + lora_B(lora_A(dropout(x))) * scaling
@@ -1035,7 +1051,7 @@ class Conv2d(nn.Module, LoraLayer):
                 dropout = self.lora_dropout[active_adapter]
                 scaling = self.scaling[active_adapter]
                 x = x.to(lora_A.weight.dtype)
-
+                
                 if not self.use_dora[active_adapter]:
                     result = result + lora_B(lora_A(dropout(x))) * scaling
                 else:
