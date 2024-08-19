@@ -122,6 +122,8 @@ class LoraLayer(BaseTunerLayer):
         # Actual trainable parameters
         self.lora_A[adapter_name] = nn.Linear(self.in_features, r, bias=False)
         self.lora_B[adapter_name] = nn.Linear(r, self.out_features, bias=False)
+        print("A - ", self.lora_A[adapter_name].weight.data)
+        print("B - ", self.lora_B[adapter_name].weight.data)
         if use_rslora:
             self.scaling[adapter_name] = lora_alpha / math.sqrt(r)
         else:
@@ -130,6 +132,8 @@ class LoraLayer(BaseTunerLayer):
         self.mask_B[adapter_name] = (torch.rand(self.out_features, r) > self.mask_percentage / 100).float()
         self.lora_A[adapter_name].weight.data *= self.mask_A[adapter_name].to(self.lora_A[adapter_name].weight.device)
         self.lora_B[adapter_name].weight.data *= self.mask_B[adapter_name].to(self.lora_B[adapter_name].weight.device)
+        print("Masked A - ", self.lora_A[adapter_name].weight.data)
+        print("Masked B - ", self.lora_B[adapter_name].weight.data)
         
         # for inits that require access to the base weight, use gather_param_ctx so that the weight is gathered when using DeepSpeed
         if isinstance(init_lora_weights, str) and init_lora_weights.startswith("pissa"):
