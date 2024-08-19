@@ -126,6 +126,7 @@ class LoraLayer(BaseTunerLayer):
         print(self.lora_A[adapter_name].weight.data)
         mask_percentage = 60
         mask_A = (torch.rand(self.in_features, r) > mask_percentage / 100).float()
+        print(mask_A)
         mask_B = (torch.rand(r, self.out_features) > mask_percentage / 100).float()
         self.lora_A[adapter_name].weight.data *= mask_A.to(self.lora_A[adapter_name].weight.device)
         self.lora_B[adapter_name].weight.data *= mask_B.to(self.lora_B[adapter_name].weight.device)
