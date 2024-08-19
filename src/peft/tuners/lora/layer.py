@@ -29,8 +29,8 @@ from peft.utils.other import transpose
 
 from .config import LoraConfig
 from .dora import DoraConv2dLayer, DoraLinearLayer
-torch.cuda.manual_seed_all(42)
-torch.manual_seed(42)
+# torch.cuda.manual_seed_all(42)
+# torch.manual_seed(42)
 
 
 class LoraLayer(BaseTunerLayer):
@@ -58,6 +58,9 @@ class LoraLayer(BaseTunerLayer):
         self._caches: dict[str, Any] = {}
         self.ephemeral_gpu_offload: bool = ephemeral_gpu_offload
         self.kwargs = kwargs
+        self.mask_percentage = 60
+        self.mask_A = (torch.rand(r, self.in_features) > self.mask_percentage / 100).float()
+        self.mask_B = (torch.rand(self.out_features, r) > self.mask_percentage / 100).float()
 
         base_layer = self.get_base_layer()
         if isinstance(base_layer, nn.Linear):
@@ -123,15 +126,10 @@ class LoraLayer(BaseTunerLayer):
             self.scaling[adapter_name] = lora_alpha / math.sqrt(r)
         else:
             self.scaling[adapter_name] = lora_alpha / r
-        print(self.lora_A[adapter_name].weight.data.size())
-        mask_percentage = 60
-        mask_A = (torch.rand(self.in_features, r) > mask_percentage / 100).float()
-        print(mask_A.size())
-        mask_B = (torch.rand(r, self.out_features) > mask_percentage / 100).float()
-        self.lora_A[adapter_name].weight.data *= mask_A.to(self.lora_A[adapter_name].weight.device)
-        self.lora_B[adapter_name].weight.data *= mask_B.to(self.lora_B[adapter_name].weight.device)
-        print(self.lora_A[adapter_name].weight.data)
-
+        
+        self.lora_A[adapter_name].weight.data *= self.mask_A.to(self.lora_A[adapter_name].weight.device)
+        self.lora_B[adapter_name].weight.data *= self.mask_B.to(self.lora_B[adapter_name].weight.device)
+        
         # for inits that require access to the base weight, use gather_param_ctx so that the weight is gathered when using DeepSpeed
         if isinstance(init_lora_weights, str) and init_lora_weights.startswith("pissa"):
             with gather_params_ctx(self.get_base_layer().weight):
@@ -556,10 +554,8 @@ class Linear(nn.Module, LoraLayer):
             for active_adapter in self.active_adapters:
                 if active_adapter not in self.lora_A.keys():
                     continue
-                mask_A = (torch.rand(self.in_features, r) > mask_percentage / 100).float()
-                mask_B = (torch.rand(r, self.out_features) > mask_percentage / 100).float()
-                self.lora_A[active_adapter].weight.data *= mask_A.to(self.lora_A[adapter_name].weight.device)
-                self.lora_B[active_adapter].weight.data *= mask_B.to(self.lora_B[adapter_name].weight.device)
+                self.lora_A[active_adapter].weight.data *= self.mask_A.to(self.lora_A[adapter_name].weight.device)
+                self.lora_B[active_adapter].weight.data *= self.mask_B.to(self.lora_B[adapter_name].weight.device)
                 
                 lora_A = self.lora_A[active_adapter]
                 lora_B = self.lora_B[active_adapter]
