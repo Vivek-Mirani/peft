@@ -559,8 +559,8 @@ class Linear(nn.Module, LoraLayer):
             for active_adapter in self.active_adapters:
                 if active_adapter not in self.lora_A.keys():
                     continue
-                self.lora_A[active_adapter].weight.data *= self.mask_A[active_adapter].to(self.lora_A[adapter_name].weight.device)
-                self.lora_B[active_adapter].weight.data *= self.mask_B[active_adapter].to(self.lora_B[adapter_name].weight.device)
+                self.lora_A[active_adapter].weight.data *= self.mask_A[active_adapter].to(self.lora_A[active_adapter].weight.device)
+                self.lora_B[active_adapter].weight.data *= self.mask_B[active_adapter].to(self.lora_B[active_adapter].weight.device)
                 
                 lora_A = self.lora_A[active_adapter]
                 lora_B = self.lora_B[active_adapter]
