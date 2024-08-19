@@ -58,8 +58,6 @@ class LoraLayer(BaseTunerLayer):
         self._caches: dict[str, Any] = {}
         self.ephemeral_gpu_offload: bool = ephemeral_gpu_offload
         self.kwargs = kwargs
-        self.mask_A = {} 
-        self.mask_B = {}
 
         base_layer = self.get_base_layer()
         if isinstance(base_layer, nn.Linear):
