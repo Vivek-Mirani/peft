@@ -139,8 +139,9 @@ class LoraLayer(BaseTunerLayer):
         print("B full - ", B_full)
 
         # Split into trainable and non-trainable parts
-        self.lora_A[adapter_name] = nn.Parameter(A_full[self.mask_A[adapter_name] == 1])
-        self.lora_B[adapter_name] = nn.Parameter(B_full[self.mask_B[adapter_name] == 1])
+        self.lora_A[adapter_name] = nn.Parameter(A_full*self.mask_A[adapter_name])
+        self.lora_B[adapter_name] = nn.Parameter(B_full*self.mask_B[adapter_name])
+        print("Shape: ", self.lora_A[adapter_name].shape)
         
         print("Masked A - ", self.lora_A[adapter_name].data)
         print("Masked B - ", self.lora_B[adapter_name].data)
