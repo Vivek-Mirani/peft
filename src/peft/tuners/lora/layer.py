@@ -139,8 +139,8 @@ class LoraLayer(BaseTunerLayer):
         print("B full - ", B_full)
 
         # Split into trainable and non-trainable parts
-        self.lora_A.update({adapter_name: nn.Parameter(A_full[self.mask_A[adapter_name] == 1])})
-        self.lora_B.update({adapter_name: nn.Parameter(B_full[self.mask_B[adapter_name] == 1])})
+        self.lora_A[adapter_name] = nn.Parameter(A_full[self.mask_A[adapter_name] == 1])
+        self.lora_B[adapter_name] = nn.Parameter(B_full[self.mask_B[adapter_name] == 1])
         
         print("Masked A - ", self.lora_A[adapter_name].data)
         print("Masked B - ", self.lora_B[adapter_name].data)
@@ -187,12 +187,12 @@ class LoraLayer(BaseTunerLayer):
             if init_lora_weights is True:
                 # initialize A the same way as the default for nn.Linear and B to zero
                 # https://github.com/microsoft/LoRA/blob/a0a92e0f26c067cf94747bdbf1ce73793fa44d19/loralib/layers.py#L124
-                nn.init.kaiming_uniform_(self.lora_A[adapter_name].data, a=math.sqrt(5))
+                nn.init.kaiming_uniform_(self.lora_A[adapter_name], a=math.sqrt(5))
             elif init_lora_weights.lower() == "gaussian":
-                nn.init.normal_(self.lora_A[adapter_name].data, std=1 / self.r[adapter_name])
+                nn.init.normal_(self.lora_A[adapter_name], std=1 / self.r[adapter_name])
             else:
                 raise ValueError(f"Unknown initialization {init_lora_weights=}")
-            nn.init.zeros_(self.lora_B[adapter_name].weight)
+            nn.init.zeros_(self.lora_B[adapter_name])
         if adapter_name in self.lora_embedding_A.keys():
             # Initialize A to zeros and B the same way as the default for nn.Embedding, see:
             # https://github.com/microsoft/LoRA/blob/4c0333854cb905966f8cc4e9a74068c1e507c7b7/loralib/layers.py#L59-L60
