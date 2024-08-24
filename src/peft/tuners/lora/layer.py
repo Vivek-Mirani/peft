@@ -142,8 +142,8 @@ class LoraLayer(BaseTunerLayer):
         self.lora_A.update({adapter_name: nn.Parameter(A_full[self.mask_A[adapter_name] == 1])})
         self.lora_B.update({adapter_name: nn.Parameter(B_full[self.mask_B[adapter_name] == 1])})
         
-        print("Masked A - ", self.lora_A[adapter_name].weight.data)
-        print("Masked B - ", self.lora_B[adapter_name].weight.data)
+        print("Masked A - ", self.lora_A[adapter_name].data)
+        print("Masked B - ", self.lora_B[adapter_name].data)
         
         self.lora_A_non_trainable[adapter_name] = A_full.clone()
         self.lora_B_non_trainable[adapter_name] = B_full.clone()
