@@ -117,6 +117,17 @@ class LoraLayer(BaseTunerLayer):
         # Actual trainable parameters
         self.lora_A[adapter_name] = nn.Linear(self.in_features, r, bias=False)
         self.lora_B[adapter_name] = nn.Linear(r, self.out_features, bias=False)
+
+        mask_percentage = 60
+        mask_A = (torch.rand(r, self.in_features) > mask_percentage / 100).float()
+        mask_B = (torch.rand(self.out_features, r) > mask_percentage / 100).float()
+        self.lora_A[adapter_name].weight.data[~mask_A] = 0
+        self.lora_B[adapter_name].weight.data[~mask_B] = 0
+
+        # Register hooks to maintain sparsity during training
+        self.lora_A[adapter_name].weight.register_hook(lambda grad: grad*mask_A)
+        self.lora_B[adapter_name].weight.register_hook(lambda grad: grad*mask_B.t())
+
         if use_rslora:
             self.scaling[adapter_name] = lora_alpha / math.sqrt(r)
         else:
