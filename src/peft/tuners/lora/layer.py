@@ -45,8 +45,8 @@ class LoraLayer(BaseTunerLayer):
         self.lora_alpha = {}
         self.scaling = {}
         self.lora_dropout = nn.ModuleDict({})
-        self.lora_A = nn.ModuleDict({})
-        self.lora_B = nn.ModuleDict({})
+        # self.lora_A = nn.ModuleDict({})
+        # self.lora_B = nn.ModuleDict({})
         # For Embedding layer
         self.lora_embedding_A = nn.ParameterDict({})
         self.lora_embedding_B = nn.ParameterDict({})
@@ -61,6 +61,10 @@ class LoraLayer(BaseTunerLayer):
         self.mask_percentage = 60
         self.mask_A = {}
         self.mask_B = {}
+        self.lora_A = nn.ParameterDict({})
+        self.lora_B = nn.ParameterDict({})
+        self.lora_A_non_trainable = {}
+        self.lora_B_non_trainable = {}
 
         base_layer = self.get_base_layer()
         if isinstance(base_layer, nn.Linear):
@@ -120,20 +124,37 @@ class LoraLayer(BaseTunerLayer):
 
         self.lora_dropout.update(nn.ModuleDict({adapter_name: lora_dropout_layer}))
         # Actual trainable parameters
-        self.lora_A[adapter_name] = nn.Linear(self.in_features, r, bias=False)
-        self.lora_B[adapter_name] = nn.Linear(r, self.out_features, bias=False)
-        print("A - ", self.lora_A[adapter_name].weight.data)
-        print("B - ", self.lora_B[adapter_name].weight.data)
+        # self.lora_A[adapter_name] = nn.Linear(self.in_features, r, bias=False)
+        # self.lora_B[adapter_name] = nn.Linear(r, self.out_features, bias=False)
+        
+        # Initialize the mask
+        self.mask_A[adapter_name] = (torch.rand(r, self.in_features) > self.mask_percentage / 100).float()
+        self.mask_B[adapter_name] = (torch.rand(self.out_features, r) > self.mask_percentage / 100).float()
+
+        # Initialize full A and B matrices
+        A_full = torch.randn(r, self.in_features)
+        B_full = torch.zeros(self.out_features, r)
+
+        print("A full - ", self.A_full[adapter_name].weight.data)
+        print("B full - ", self.B_full[adapter_name].weight.data)
+
+        # Split into trainable and non-trainable parts
+        self.lora_A.update({adapter_name: nn.Parameter(A_full[self.mask_A[adapter_name] == 1])})
+        self.lora_B.update({adapter_name: nn.Parameter(B_full[self.mask_B[adapter_name] == 1])})
+        
+        print("Masked A - ", self.lora_A[adapter_name].weight.data)
+        print("Masked B - ", self.lora_B[adapter_name].weight.data)
+        
+        self.lora_A_non_trainable[adapter_name] = A_full.clone()
+        self.lora_B_non_trainable[adapter_name] = B_full.clone()
+        
         if use_rslora:
             self.scaling[adapter_name] = lora_alpha / math.sqrt(r)
         else:
             self.scaling[adapter_name] = lora_alpha / r
-        self.mask_A[adapter_name] = (torch.rand(r, self.in_features) > self.mask_percentage / 100).float()
-        self.mask_B[adapter_name] = (torch.rand(self.out_features, r) > self.mask_percentage / 100).float()
-        self.lora_A[adapter_name].weight.data *= self.mask_A[adapter_name].to(self.lora_A[adapter_name].weight.device)
-        self.lora_B[adapter_name].weight.data *= self.mask_B[adapter_name].to(self.lora_B[adapter_name].weight.device)
-        print("Masked A - ", self.lora_A[adapter_name].weight.data)
-        print("Masked B - ", self.lora_B[adapter_name].weight.data)
+            
+        # self.lora_A[adapter_name].weight.data *= self.mask_A[adapter_name].to(self.lora_A[adapter_name].weight.device)
+        # self.lora_B[adapter_name].weight.data *= self.mask_B[adapter_name].to(self.lora_B[adapter_name].weight.device)
         
         # for inits that require access to the base weight, use gather_param_ctx so that the weight is gathered when using DeepSpeed
         if isinstance(init_lora_weights, str) and init_lora_weights.startswith("pissa"):
@@ -541,6 +562,16 @@ class Linear(nn.Module, LoraLayer):
 
         return output_tensor
 
+    def recomstruct_weights(self, active_adapter):
+        # Reconstruct full matrices from trainable and non-trainable parts
+        W_a_full = self.lora_A_non_trainable[active_adapter].clone()
+        W_b_full = self.lora_B_non_trainable[active_adapter].clone()
+
+        W_a_full[self.mask_A[active_adapter] == 1] = self.lora_A[active_adapter]
+        W_b_full[self.mask_B[active_adapter] == 1] = self.lora_B[active_adapter]
+
+        return W_a_full, W_b_full
+
     def forward(self, x: torch.Tensor, *args: Any, **kwargs: Any) -> torch.Tensor:
         self._check_forward_args(x, *args, **kwargs)
         adapter_names = kwargs.pop("adapter_names", None)
@@ -559,11 +590,13 @@ class Linear(nn.Module, LoraLayer):
             for active_adapter in self.active_adapters:
                 if active_adapter not in self.lora_A.keys():
                     continue
-                self.lora_A[active_adapter].weight.data *= self.mask_A[active_adapter].to(self.lora_A[active_adapter].weight.device)
-                self.lora_B[active_adapter].weight.data *= self.mask_B[active_adapter].to(self.lora_B[active_adapter].weight.device)
+
+                W_a_full, W_b_full = self.recomstruct_weights(active_adapter)
+                # self.lora_A[active_adapter].weight.data *= self.mask_A[active_adapter].to(self.lora_A[active_adapter].weight.device)
+                # self.lora_B[active_adapter].weight.data *= self.mask_B[active_adapter].to(self.lora_B[active_adapter].weight.device)
                 
-                lora_A = self.lora_A[active_adapter]
-                lora_B = self.lora_B[active_adapter]
+                lora_A = W_a_full # self.lora_A[active_adapter]
+                lora_B = W_b_full # self.lora_B[active_adapter]
                 dropout = self.lora_dropout[active_adapter]
                 scaling = self.scaling[active_adapter]
                 x = x.to(lora_A.weight.dtype)
