@@ -574,8 +574,8 @@ class Linear(nn.Module, LoraLayer):
 
     def reconstruct_weights(self, active_adapter):
         # Reconstruct full matrices from trainable and non-trainable parts
-        W_a_full = self.lora_A_non_trainable[active_adapter].clone().to(self.lora_A[active_adapter].weight.device)
-        W_b_full = self.lora_B_non_trainable[active_adapter].clone().to(self.lora_B[active_adapter].weight.device)
+        W_a_full = self.lora_A_non_trainable[active_adapter].clone().to(self.lora_A[active_adapter].device)
+        W_b_full = self.lora_B_non_trainable[active_adapter].clone().to(self.lora_B[active_adapter].device)
 
         W_a_full[self.mask_A[active_adapter]] = self.lora_A[active_adapter]
         W_b_full[self.mask_B[active_adapter]] = self.lora_B[active_adapter]
