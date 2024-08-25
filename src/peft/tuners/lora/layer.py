@@ -197,7 +197,7 @@ class LoraLayer(BaseTunerLayer):
                 # initialize A the same way as the default for nn.Linear and B to zero
                 # https://github.com/microsoft/LoRA/blob/a0a92e0f26c067cf94747bdbf1ce73793fa44d19/loralib/layers.py#L124
                 # nn.init.kaiming_uniform_(self.lora_A[adapter_name], a=math.sqrt(5))
-                kaiming_init_1d(self.lora_A[adapter_name], a=math.sqrt(5))
+                self.kaiming_init_1d(self.lora_A[adapter_name], a=math.sqrt(5))
             elif init_lora_weights.lower() == "gaussian":
                 nn.init.normal_(self.lora_A[adapter_name], std=1 / self.r[adapter_name])
             else:
