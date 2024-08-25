@@ -139,8 +139,8 @@ class LoraLayer(BaseTunerLayer):
         print("B full - ", B_full)
 
         # Split into trainable and non-trainable parts
-        self.lora_A[adapter_name] = nn.Parameter(A_full*self.mask_A[adapter_name])
-        self.lora_B[adapter_name] = nn.Parameter(B_full*self.mask_B[adapter_name])
+        self.lora_A[adapter_name] = nn.Parameter(A_full[self.mask_A[adapter_name] == 1])
+        self.lora_B[adapter_name] = nn.Parameter(B_full[self.mask_B[adapter_name] == 1])
         print("Shape: ", self.lora_A[adapter_name].shape)
         
         print("Masked A - ", self.lora_A[adapter_name].data)
@@ -180,6 +180,14 @@ class LoraLayer(BaseTunerLayer):
 
         self.set_adapter(self.active_adapters)
 
+    def kaiming_init_1d(tensor, a=0, mode='fan_in', nonlinearity='leaky_relu'):
+        fan = tensor.size(0)  # Since it's 1D, take the size of the tensor directly
+        gain = nn.init.calculate_gain(nonlinearity, a)
+        std = gain / math.sqrt(fan)
+        bound = math.sqrt(3.0) * std  # Calculate the bound for uniform distribution
+        with torch.no_grad():
+            tensor.uniform_(-bound, bound)
+    
     def reset_lora_parameters(self, adapter_name, init_lora_weights):
         if init_lora_weights is False:
             return
@@ -188,7 +196,8 @@ class LoraLayer(BaseTunerLayer):
             if init_lora_weights is True:
                 # initialize A the same way as the default for nn.Linear and B to zero
                 # https://github.com/microsoft/LoRA/blob/a0a92e0f26c067cf94747bdbf1ce73793fa44d19/loralib/layers.py#L124
-                nn.init.kaiming_uniform_(self.lora_A[adapter_name], a=math.sqrt(5))
+                # nn.init.kaiming_uniform_(self.lora_A[adapter_name], a=math.sqrt(5))
+                kaiming_init_1d(self.lora_A[adapter_name], a=math.sqrt(5))
             elif init_lora_weights.lower() == "gaussian":
                 nn.init.normal_(self.lora_A[adapter_name], std=1 / self.r[adapter_name])
             else:
@@ -563,7 +572,7 @@ class Linear(nn.Module, LoraLayer):
 
         return output_tensor
 
-    def recomstruct_weights(self, active_adapter):
+    def reconstruct_weights(self, active_adapter):
         # Reconstruct full matrices from trainable and non-trainable parts
         W_a_full = self.lora_A_non_trainable[active_adapter].clone()
         W_b_full = self.lora_B_non_trainable[active_adapter].clone()
@@ -592,7 +601,7 @@ class Linear(nn.Module, LoraLayer):
                 if active_adapter not in self.lora_A.keys():
                     continue
 
-                W_a_full, W_b_full = self.recomstruct_weights(active_adapter)
+                W_a_full, W_b_full = self.reconstruct_weights(active_adapter)
                 # self.lora_A[active_adapter].weight.data *= self.mask_A[active_adapter].to(self.lora_A[active_adapter].weight.device)
                 # self.lora_B[active_adapter].weight.data *= self.mask_B[active_adapter].to(self.lora_B[active_adapter].weight.device)
                 
