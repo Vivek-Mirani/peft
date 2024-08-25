@@ -127,8 +127,8 @@ class LoraLayer(BaseTunerLayer):
         self.lora_B[adapter_name].weight.data[~mask_B] = 0
 
         # Register hooks to maintain sparsity during training
-        self.lora_A[adapter_name].weight.register_hook(lambda grad: grad.to(device)*mask_A.to(device))
-        self.lora_B[adapter_name].weight.register_hook(lambda grad: grad.to(device)*mask_B.to(device))
+        self.lora_A[adapter_name].weight.register_hook(lambda grad: grad*mask_A.to(grad.device))
+        self.lora_B[adapter_name].weight.register_hook(lambda grad: grad*mask_B.to(grad.device))
         print("Masked A - ", self.lora_A[adapter_name].weight.data)
         print("Masked B - ", self.lora_B[adapter_name].weight.data)
 
