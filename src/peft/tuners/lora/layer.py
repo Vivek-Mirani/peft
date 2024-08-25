@@ -579,8 +579,6 @@ class Linear(nn.Module, LoraLayer):
 
         W_a_full[self.mask_A[active_adapter]] = self.lora_A[active_adapter]
         W_b_full[self.mask_B[active_adapter]] = self.lora_B[active_adapter]
-        print("W_a_full shape: ", W_a_full.shape)
-        print("W_b_full shape: ", W_b_full.shape)
 
         return W_a_full, W_b_full
 
@@ -614,7 +612,6 @@ class Linear(nn.Module, LoraLayer):
                 # dropout_x_reshaped = dropout(x).view(-1, 768)  # Ensure the dimensions are compatible
                 # print("dropout_x_rephased shape: ", dropout_x_reshaped.shape)
                 dropout_x = dropout(x) 
-                print("dropout_x shape: ", dropout_x.shape)
                 scaling = self.scaling[active_adapter]
                 x = x.to(lora_A.dtype)
 
@@ -626,8 +623,6 @@ class Linear(nn.Module, LoraLayer):
                     # output = output.T
                     intermediate = torch.matmul(dropout_x, lora_A.T)  # Shape: (batch_size, sequence_length, rank)
                     output = torch.matmul(intermediate, lora_B.T)  # Shape: (batch_size, sequence_length, hidden_size)
-                    print("result: ", result.shape)
-                    print("output shape: ", output.shape)
                     result = result + output * scaling
 
                 else:
