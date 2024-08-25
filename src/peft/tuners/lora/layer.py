@@ -118,15 +118,17 @@ class LoraLayer(BaseTunerLayer):
         self.lora_A[adapter_name] = nn.Linear(self.in_features, r, bias=False)
         self.lora_B[adapter_name] = nn.Linear(r, self.out_features, bias=False)
 
+        device = self.lora_A[adapter_name].weight.device
+
         mask_percentage = 60
-        mask_A = (torch.rand(r, self.in_features) > mask_percentage / 100).to(self.lora_A[adapter_name].weight.device)
-        mask_B = (torch.rand(self.out_features, r) > mask_percentage / 100).to(self.lora_B[adapter_name].weight.device)
+        mask_A = (torch.rand(r, self.in_features) > mask_percentage / 100)
+        mask_B = (torch.rand(self.out_features, r) > mask_percentage / 100)
         self.lora_A[adapter_name].weight.data[~mask_A] = 0
         self.lora_B[adapter_name].weight.data[~mask_B] = 0
 
         # Register hooks to maintain sparsity during training
-        self.lora_A[adapter_name].weight.register_hook(lambda grad: grad*mask_A)
-        self.lora_B[adapter_name].weight.register_hook(lambda grad: grad*mask_B)
+        self.lora_A[adapter_name].weight.register_hook(lambda grad: grad.to(device)*mask_A.to(device))
+        self.lora_B[adapter_name].weight.register_hook(lambda grad: grad.to(device)*mask_B.to(device))
         print("Masked A - ", self.lora_A[adapter_name].weight.data)
         print("Masked B - ", self.lora_B[adapter_name].weight.data)
 
