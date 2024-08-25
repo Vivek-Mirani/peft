@@ -128,8 +128,8 @@ class LoraLayer(BaseTunerLayer):
         # self.lora_B[adapter_name] = nn.Linear(r, self.out_features, bias=False)
         
         # Initialize the mask
-        self.mask_A[adapter_name] = (torch.rand(r, self.in_features) > self.mask_percentage / 100).float()
-        self.mask_B[adapter_name] = (torch.rand(self.out_features, r) > self.mask_percentage / 100).float()
+        self.mask_A[adapter_name] = (torch.rand(r, self.in_features) > self.mask_percentage / 100)
+        self.mask_B[adapter_name] = (torch.rand(self.out_features, r) > self.mask_percentage / 100)
 
         # Initialize full A and B matrices
         A_full = torch.randn(r, self.in_features)
@@ -574,11 +574,13 @@ class Linear(nn.Module, LoraLayer):
 
     def reconstruct_weights(self, active_adapter):
         # Reconstruct full matrices from trainable and non-trainable parts
-        W_a_full = self.lora_A_non_trainable[active_adapter].clone()
-        W_b_full = self.lora_B_non_trainable[active_adapter].clone()
+        W_a_full = self.lora_A_non_trainable[active_adapter].clone().to(self.lora_A[adapter_name].weight.device)
+        W_b_full = self.lora_B_non_trainable[active_adapter].clone().to(self.lora_B[adapter_name].weight.device)
 
-        W_a_full[self.mask_A[active_adapter] == 1] = self.lora_A[active_adapter]
-        W_b_full[self.mask_B[active_adapter] == 1] = self.lora_B[active_adapter]
+        W_a_full[self.mask_A[active_adapter]] = self.lora_A[active_adapter]
+        W_b_full[self.mask_B[active_adapter]] = self.lora_B[active_adapter]
+        print("W_a_full: ", W_a_full)
+        print("W_b_full: ", W_b_full)
 
         return W_a_full, W_b_full
 
