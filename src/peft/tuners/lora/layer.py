@@ -581,6 +581,8 @@ class Linear(nn.Module, LoraLayer):
         W_b_full[self.mask_B[active_adapter]] = self.lora_B[active_adapter]
         print("W_a_full: ", W_a_full)
         print("W_b_full: ", W_b_full)
+        print("W_a_full shape: ", W_a_full.shape())
+        print("W_b_full shape: ", W_b_full.shape())
 
         return W_a_full, W_b_full
 
@@ -604,7 +606,7 @@ class Linear(nn.Module, LoraLayer):
                     continue
 
                 W_a_full, W_b_full = self.reconstruct_weights(active_adapter)
-                print("bruh")
+
                 # self.lora_A[active_adapter].weight.data *= self.mask_A[active_adapter].to(self.lora_A[active_adapter].weight.device)
                 # self.lora_B[active_adapter].weight.data *= self.mask_B[active_adapter].to(self.lora_B[active_adapter].weight.device)
                 
@@ -613,11 +615,14 @@ class Linear(nn.Module, LoraLayer):
                 dropout = self.lora_dropout[active_adapter]
                 scaling = self.scaling[active_adapter]
                 x = x.to(lora_A.dtype)
-                
 
                 if not self.use_dora[active_adapter]:
                     # result = result + lora_B(lora_A(dropout(x))) * scaling
-                    result = result + torch.matmul(lora_B, torch.matmul(lora_A, dropout(x).T)).T * scaling
+                    # result = result + torch.matmul(lora_B, torch.matmul(lora_A, dropout(x).T)).T * scaling
+                    intermediate = torch.matmul(self.lora_A[adapter_name], dropout(x).T)  # Shape: (rank, batch_size)
+                    output = torch.matmul(self.lora_B[adapter_name], intermediate)  # Shape: (out_features, batch_size)
+                    output = output.T
+                    result = result + output * scaling
 
                 else:
                     x = dropout(x)
