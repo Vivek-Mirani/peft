@@ -610,10 +610,11 @@ class Linear(nn.Module, LoraLayer):
                 
                 lora_A = W_a_full # self.lora_A[active_adapter]
                 lora_B = W_b_full # self.lora_B[active_adapter]
-                # dropout = self.lora_dropout[active_adapter]
+                dropout = self.lora_dropout[active_adapter]
                 # dropout_x_reshaped = dropout(x).view(-1, 768)  # Ensure the dimensions are compatible
                 # print("dropout_x_rephased shape: ", dropout_x_reshaped.shape)
                 dropout_x = dropout(x) 
+                print("dropout_x shape: ", dropout_x.shape)
                 scaling = self.scaling[active_adapter]
                 x = x.to(lora_A.dtype)
 
