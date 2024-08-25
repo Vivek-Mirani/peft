@@ -180,7 +180,7 @@ class LoraLayer(BaseTunerLayer):
 
         self.set_adapter(self.active_adapters)
 
-    def kaiming_init_1d(tensor, a=0, mode='fan_in', nonlinearity='leaky_relu'):
+    def kaiming_init_1d(self, tensor, a=0, mode='fan_in', nonlinearity='leaky_relu'):
         fan = tensor.size(0)  # Since it's 1D, take the size of the tensor directly
         gain = nn.init.calculate_gain(nonlinearity, a)
         std = gain / math.sqrt(fan)
