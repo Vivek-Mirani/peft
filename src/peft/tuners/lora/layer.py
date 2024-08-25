@@ -620,8 +620,8 @@ class Linear(nn.Module, LoraLayer):
                 if not self.use_dora[active_adapter]:
                     # result = result + lora_B(lora_A(dropout(x))) * scaling
                     # result = result + torch.matmul(lora_B, torch.matmul(lora_A, dropout(x).T)).T * scaling
-                    intermediate = torch.matmul(self.lora_A[active_adapter], dropout_x_reshaped.T)  # Shape: (rank, batch_size)
-                    output = torch.matmul(self.lora_B[active_adapter], intermediate)  # Shape: (out_features, batch_size)
+                    intermediate = torch.matmul(lora_A, dropout_x_reshaped.T)  # Shape: (rank, batch_size)
+                    output = torch.matmul(lora_B, intermediate)  # Shape: (out_features, batch_size)
                     output = output.T
                     result = result + output * scaling
 
