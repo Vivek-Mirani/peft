@@ -394,7 +394,7 @@ class LoraLayer(BaseTunerLayer):
 
             # getting the sub-batch, passing it to LoRA layers and updating the corresponding indices of the linear
             # layer output
-            sub_batch = x[sub_batch_indices_list[i]].to(lora_A.weight.dtype)
+            sub_batch = x[sub_batch_indices_list[i]].to(lora_A.dtype)
             lora_output = lora_B(lora_A(dropout(sub_batch))) * scaling
             result[sub_batch_indices_list[i]] += lora_output.to(torch_result_dtype)
 
@@ -546,16 +546,16 @@ class Linear(nn.Module, LoraLayer):
             adapter (str):
                 The name of the adapter for which the delta weight should be computed.
         """
-        device = self.lora_B[adapter].weight.device
-        dtype = self.lora_B[adapter].weight.dtype
+        device = self.lora_B[adapter].device
+        dtype = self.lora_B[adapter].dtype
 
         # In case users wants to merge the adapter weights that are in
         # (b)float16 while being on CPU, we need to cast the weights to float32, perform the merge and then cast back to
         # (b)float16 because some CPUs have slow bf16/fp16 matmuls.
         cast_to_fp32 = device.type == "cpu" and (dtype == torch.float16 or dtype == torch.bfloat16)
 
-        weight_A = self.lora_A[adapter].weight
-        weight_B = self.lora_B[adapter].weight
+        weight_A = self.lora_A[adapter]
+        weight_B = self.lora_B[adapter]
 
         if cast_to_fp32:
             weight_A = weight_A.float()
@@ -567,8 +567,8 @@ class Linear(nn.Module, LoraLayer):
             output_tensor = output_tensor.to(dtype=dtype)
 
             # cast back the weights
-            self.lora_A[adapter].weight.data = weight_A.to(dtype)
-            self.lora_B[adapter].weight.data = weight_B.to(dtype)
+            self.lora_A[adapter].data = weight_A.to(dtype)
+            self.lora_B[adapter].data = weight_B.to(dtype)
 
         return output_tensor
 
@@ -611,7 +611,7 @@ class Linear(nn.Module, LoraLayer):
                 lora_B = W_b_full # self.lora_B[active_adapter]
                 dropout = self.lora_dropout[active_adapter]
                 scaling = self.scaling[active_adapter]
-                x = x.to(lora_A.weight.dtype)
+                x = x.to(lora_A.dtype)
                 
 
                 if not self.use_dora[active_adapter]:
