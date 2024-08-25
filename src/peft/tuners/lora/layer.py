@@ -604,6 +604,7 @@ class Linear(nn.Module, LoraLayer):
                     continue
 
                 W_a_full, W_b_full = self.reconstruct_weights(active_adapter)
+                print("bruh")
                 # self.lora_A[active_adapter].weight.data *= self.mask_A[active_adapter].to(self.lora_A[active_adapter].weight.device)
                 # self.lora_B[active_adapter].weight.data *= self.mask_B[active_adapter].to(self.lora_B[active_adapter].weight.device)
                 
