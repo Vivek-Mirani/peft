@@ -610,21 +610,23 @@ class Linear(nn.Module, LoraLayer):
                 
                 lora_A = W_a_full # self.lora_A[active_adapter]
                 lora_B = W_b_full # self.lora_B[active_adapter]
-                dropout = self.lora_dropout[active_adapter]
-                dropout_x_reshaped = dropout(x).view(-1, 768)  # Ensure the dimensions are compatible
-                print("dropout_x_rephased shape: ", dropout_x_reshaped.shape)
+                # dropout = self.lora_dropout[active_adapter]
+                # dropout_x_reshaped = dropout(x).view(-1, 768)  # Ensure the dimensions are compatible
+                # print("dropout_x_rephased shape: ", dropout_x_reshaped.shape)
+                dropout_x = dropout(x) 
                 scaling = self.scaling[active_adapter]
                 x = x.to(lora_A.dtype)
 
                 if not self.use_dora[active_adapter]:
                     # result = result + lora_B(lora_A(dropout(x))) * scaling
                     # result = result + torch.matmul(lora_B, torch.matmul(lora_A, dropout(x).T)).T * scaling
-                    intermediate = torch.matmul(lora_A, dropout_x_reshaped.T)  # Shape: (rank, batch_size)
-                    output = torch.matmul(lora_B, intermediate)  # Shape: (out_features, batch_size)
-                    output = output.T
+                    # intermediate = torch.matmul(lora_A, dropout_x_reshaped.T)  # Shape: (rank, batch_size)
+                    # output = torch.matmul(lora_B, intermediate)  # Shape: (out_features, batch_size)
+                    # output = output.T
+                    intermediate = torch.matmul(dropout_x, lora_A.T)  # Shape: (batch_size, sequence_length, rank)
+                    output = torch.matmul(intermediate, lora_B.T)  # Shape: (batch_size, sequence_length, hidden_size)
                     print("result: ", result.shape)
                     print("output shape: ", output.shape)
-                    print("scaling shape: ", scaling.shape)
                     result = result + output * scaling
 
                 else:
