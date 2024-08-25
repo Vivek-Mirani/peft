@@ -581,8 +581,8 @@ class Linear(nn.Module, LoraLayer):
         W_b_full[self.mask_B[active_adapter]] = self.lora_B[active_adapter]
         print("W_a_full: ", W_a_full)
         print("W_b_full: ", W_b_full)
-        print("W_a_full shape: ", W_a_full.shape())
-        print("W_b_full shape: ", W_b_full.shape())
+        print("W_a_full shape: ", W_a_full.shape)
+        print("W_b_full shape: ", W_b_full.shape)
 
         return W_a_full, W_b_full
 
