@@ -579,8 +579,6 @@ class Linear(nn.Module, LoraLayer):
 
         W_a_full[self.mask_A[active_adapter]] = self.lora_A[active_adapter]
         W_b_full[self.mask_B[active_adapter]] = self.lora_B[active_adapter]
-        print("W_a_full: ", W_a_full)
-        print("W_b_full: ", W_b_full)
         print("W_a_full shape: ", W_a_full.shape)
         print("W_b_full shape: ", W_b_full.shape)
 
@@ -624,6 +622,9 @@ class Linear(nn.Module, LoraLayer):
                     intermediate = torch.matmul(lora_A, dropout_x_reshaped.T)  # Shape: (rank, batch_size)
                     output = torch.matmul(lora_B, intermediate)  # Shape: (out_features, batch_size)
                     output = output.T
+                    print("result: ", result.shape)
+                    print("output shape: ", output.shape)
+                    print("scaling shape: ", scaling.shape)
                     result = result + output * scaling
 
                 else:
