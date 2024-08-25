@@ -570,7 +570,14 @@ class Linear(nn.Module, LoraLayer):
                 
 
                 if not self.use_dora[active_adapter]:
+                    print(result.shape)
+                    print(dropout(x).shape)
+                    print(lora_A.shape)
+                    print(lora_B.shape)
                     result = result + lora_B(lora_A(dropout(x))) * scaling
+                    print(lora_A(dropout(x)).shape)
+                    print(lora_B(lora_A(dropout(x))).shape)
+                    
                 else:
                     x = dropout(x)
                     result = result + self.lora_magnitude_vector[active_adapter](
