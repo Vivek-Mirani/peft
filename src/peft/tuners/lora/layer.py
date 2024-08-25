@@ -615,7 +615,9 @@ class Linear(nn.Module, LoraLayer):
                 
 
                 if not self.use_dora[active_adapter]:
-                    result = result + lora_B(lora_A(dropout(x))) * scaling
+                    # result = result + lora_B(lora_A(dropout(x))) * scaling
+                    result = result + torch.matmul(lora_B, torch.matmul(lora_A, dropout(x).T)).T * scaling
+
                 else:
                     x = dropout(x)
                     result = result + self.lora_magnitude_vector[active_adapter](
