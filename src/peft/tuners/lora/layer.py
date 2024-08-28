@@ -128,6 +128,7 @@ class LoraLayer(BaseTunerLayer):
         # self.lora_B[adapter_name] = nn.Linear(r, self.out_features, bias=False)
         
         # Initialize the mask
+        torch.manual_seed(0)
         self.mask_A[adapter_name] = (torch.rand(r, self.in_features) > self.mask_percentage / 100)
         self.mask_B[adapter_name] = (torch.rand(self.out_features, r) > self.mask_percentage / 100)
 
