@@ -56,6 +56,8 @@ class LoraLayer(BaseTunerLayer):
         self._caches: dict[str, Any] = {}
         self.ephemeral_gpu_offload: bool = ephemeral_gpu_offload
         self.kwargs = kwargs
+        self.mask_percentage = 60
+        self.mask_W = {}
 
         base_layer = self.get_base_layer()
         if isinstance(base_layer, nn.Linear):
@@ -551,9 +553,12 @@ class Linear(nn.Module, LoraLayer):
                 dropout = self.lora_dropout[active_adapter]
                 scaling = self.scaling[active_adapter]
                 x = x.to(lora_A.weight.dtype)
+                torch.manual_seed(0)
+                self.mask_W[adapter_name] = (torch.rand(self.out_features, self.in_features) > self.mask_percentage / 100).float()
 
                 if not self.use_dora[active_adapter]:
-                    result = result + lora_B(lora_A(dropout(x))) * scaling
+                    masked_output = self.mask_W[adapter_name] * lora_B(lora_A(dropout(x)))
+                    result = result + masked_output * scaling
                 else:
                     x = dropout(x)
                     result = result + self.lora_magnitude_vector[active_adapter](
