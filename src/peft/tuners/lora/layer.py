@@ -554,7 +554,9 @@ class Linear(nn.Module, LoraLayer):
                 scaling = self.scaling[active_adapter]
                 x = x.to(lora_A.weight.dtype)
                 torch.manual_seed(0)
-                self.mask_W[active_adapter] = (torch.rand(self.out_features, self.in_features) > self.mask_percentage / 100).float()
+                self.mask_W[active_adapter] = (torch.rand(self.in_features, self.out_features) > self.mask_percentage / 100).float()
+                print("Mask size: ", mask_W.shape)
+                print("del W size: ", (lora_B(lora_A(dropout(x)))).shape)
 
                 if not self.use_dora[active_adapter]:
                     masked_output = self.mask_W[active_adapter] * lora_B(lora_A(dropout(x)))
