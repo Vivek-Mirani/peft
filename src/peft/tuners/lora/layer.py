@@ -559,6 +559,7 @@ class Linear(nn.Module, LoraLayer):
                 if not self.use_dora[active_adapter]:
                     masked_output = self.mask_W[adapter_name] * lora_B(lora_A(dropout(x)))
                     result = result + masked_output * scaling
+                    print("result: ", result)
                 else:
                     x = dropout(x)
                     result = result + self.lora_magnitude_vector[active_adapter](
