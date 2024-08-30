@@ -32,6 +32,7 @@ from .dora import DoraConv2dLayer, DoraLinearLayer
 torch.cuda.manual_seed_all(42)
 torch.manual_seed(42)
 
+import time
 
 class LoraLayer(BaseTunerLayer):
     # All names of layers that may contain (trainable) adapter weights
@@ -443,6 +444,7 @@ class Linear(nn.Module, LoraLayer):
             use_dora=use_dora,
         )
         self.is_target_conv_1d_layer = is_target_conv_1d_layer
+        self.total_forward_pass_time = 0.0        
 
     def merge(self, safe_merge: bool = False, adapter_names: Optional[list[str]] = None) -> None:
         """
@@ -587,6 +589,9 @@ class Linear(nn.Module, LoraLayer):
         self._check_forward_args(x, *args, **kwargs)
         adapter_names = kwargs.pop("adapter_names", None)
 
+        # Timer for forward pass
+        start_time_forward_pass = time.time()
+
         if self.disable_adapters:
             if self.merged:
                 self.unmerge()
@@ -638,6 +643,9 @@ class Linear(nn.Module, LoraLayer):
 
             result = result.to(torch_result_dtype)
 
+        # Stop the forward pass timer
+        elapsed_time_forward_pass = time.time() - start_time_forward_pass
+        self.total_forward_pass_time += elapsed_time_forward_pass
         return result
 
     def __repr__(self) -> str:
