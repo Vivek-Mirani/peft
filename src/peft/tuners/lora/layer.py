@@ -389,8 +389,6 @@ class Linear(nn.Module, LoraLayer):
         LoraLayer.__init__(self, base_layer, **kwargs)
         self.fan_in_fan_out = fan_in_fan_out
 
-        # self.r[adapter_name] = r
-        
         self._active_adapter = adapter_name
         self.update_layer(
             adapter_name,
@@ -555,14 +553,9 @@ class Linear(nn.Module, LoraLayer):
                 dropout = self.lora_dropout[active_adapter]
                 scaling = self.scaling[active_adapter]
                 x = x.to(lora_A.weight.dtype)
-                # r = self.r[active_adapter]
-                print("x shape: ", x.shape)
-                print("dropout(x) size: ", dropout(x).shape)
+                batch_size, seq_len, feature_dim = x.shape
                 torch.manual_seed(0)
-                self.mask_W[active_adapter] = (torch.rand(16, 512, self.out_features) > self.mask_percentage / 100).float().to(x.device)
-                # self.mask_W[active_adapter] = (torch.rand(self.in_features, self.out_features) > self.mask_percentage / 100).float()
-                print("Mask size: ", self.mask_W[active_adapter].shape)
-                print("del W size: ", lora_B(lora_A(dropout(x))).shape)
+                self.mask_W[active_adapter] = (torch.rand(batch_size, seq_len, self.out_features) > self.mask_percentage / 100).to(x.device)
 
                 if not self.use_dora[active_adapter]:
                     masked_output = self.mask_W[active_adapter] * lora_B(lora_A(dropout(x)))
