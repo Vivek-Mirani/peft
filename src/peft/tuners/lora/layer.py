@@ -30,6 +30,8 @@ from peft.utils.other import transpose
 from .config import LoraConfig
 from .dora import DoraConv2dLayer, DoraLinearLayer
 
+import time
+
 
 class LoraLayer(BaseTunerLayer):
     # All names of layers that may contain (trainable) adapter weights
