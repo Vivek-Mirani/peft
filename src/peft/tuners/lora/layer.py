@@ -128,7 +128,7 @@ class LoraLayer(BaseTunerLayer):
             self.scaling[adapter_name] = lora_alpha / math.sqrt(r)
         else:
             self.scaling[adapter_name] = lora_alpha / r
-        torch.manual_seed(0)
+        torch.manual_seed(42)
         self.mask_A[adapter_name] = (torch.rand(r, self.in_features) > self.mask_percentage / 100).float()
         self.mask_B[adapter_name] = (torch.rand(self.out_features, r) > self.mask_percentage / 100).float()
         self.lora_A[adapter_name].weight.data *= self.mask_A[adapter_name].to(self.lora_A[adapter_name].weight.device)
