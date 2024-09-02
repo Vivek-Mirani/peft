@@ -412,6 +412,7 @@ class Linear(nn.Module, LoraLayer):
             use_dora=use_dora,
         )
         self.is_target_conv_1d_layer = is_target_conv_1d_layer
+        self.total_forward_pass_time = 0.0
 
     def merge(self, safe_merge: bool = False, adapter_names: Optional[list[str]] = None) -> None:
         """
@@ -545,6 +546,8 @@ class Linear(nn.Module, LoraLayer):
     def forward(self, x: torch.Tensor, *args: Any, **kwargs: Any) -> torch.Tensor:
         self._check_forward_args(x, *args, **kwargs)
         adapter_names = kwargs.pop("adapter_names", None)
+        # Timer for forward pass
+        start_time_forward_pass = time.time()
 
         if self.disable_adapters:
             if self.merged:
@@ -591,6 +594,8 @@ class Linear(nn.Module, LoraLayer):
 
             result = result.to(torch_result_dtype)
 
+        # Stop the forward pass timer
+        self.total_forward_pass_time += time.time() - start_time_forward_pass
         return result
 
     def __repr__(self) -> str:
