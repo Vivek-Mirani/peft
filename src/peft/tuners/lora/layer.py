@@ -31,6 +31,7 @@ from .config import LoraConfig
 from .dora import DoraConv2dLayer, DoraLinearLayer
 torch.cuda.manual_seed_all(42)
 torch.manual_seed(42)
+import time
 
 
 class LoraLayer(BaseTunerLayer):
