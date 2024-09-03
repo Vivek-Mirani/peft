@@ -129,7 +129,7 @@ class LoraLayer(BaseTunerLayer):
         # self.lora_B[adapter_name] = nn.Linear(r, self.out_features, bias=False)
         
         # Initialize the mask
-        torch.manual_seed(0)
+        torch.manual_seed(42)
         self.mask_A[adapter_name] = (torch.rand(r, self.in_features) > self.mask_percentage / 100)
         self.mask_B[adapter_name] = (torch.rand(self.out_features, r) > self.mask_percentage / 100)
 
@@ -588,7 +588,6 @@ class Linear(nn.Module, LoraLayer):
     def forward(self, x: torch.Tensor, *args: Any, **kwargs: Any) -> torch.Tensor:
         self._check_forward_args(x, *args, **kwargs)
         adapter_names = kwargs.pop("adapter_names", None)
-
         # Timer for forward pass
         start_time_forward_pass = time.time()
 
