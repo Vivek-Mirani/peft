@@ -416,6 +416,7 @@ class Linear(nn.Module, LoraLayer):
             use_dora=use_dora,
         )
         self.is_target_conv_1d_layer = is_target_conv_1d_layer
+        self.total_forward_pass_time = 0.0
 
     def merge(self, safe_merge: bool = False, adapter_names: Optional[list[str]] = None) -> None:
         """
