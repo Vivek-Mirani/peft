@@ -29,7 +29,9 @@ from peft.utils.other import transpose
 
 from .config import LoraConfig
 from .dora import DoraConv2dLayer, DoraLinearLayer
-
+torch.cuda.manual_seed_all(42)
+torch.manual_seed(42)
+import time
 
 class LoraLayer(BaseTunerLayer):
     # All names of layers that may contain (trainable) adapter weights
@@ -547,6 +549,8 @@ class Linear(nn.Module, LoraLayer):
     def forward(self, x: torch.Tensor, *args: Any, **kwargs: Any) -> torch.Tensor:
         self._check_forward_args(x, *args, **kwargs)
         adapter_names = kwargs.pop("adapter_names", None)
+        # Start the forward pass timer
+        start_time_forward_pass = time.time()
 
         if self.disable_adapters:
             if self.merged:
@@ -581,7 +585,11 @@ class Linear(nn.Module, LoraLayer):
                     )
 
             result = result.to(torch_result_dtype)
-
+            
+        # Stop the forward pass timer
+        elapsed_time_forward_pass = time.time() - start_time_forward_pass
+        self.total_forward_pass_time += elapsed_time_forward_pass
+        # print(time.time() - start_time_forward_pass)
         return result
 
     def __repr__(self) -> str:
