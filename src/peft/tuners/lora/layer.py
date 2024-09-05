@@ -587,7 +587,7 @@ class Linear(nn.Module, LoraLayer):
                     # print('delta_w: ', delta_W)
                     # print('sparsity/delta_W: ', (torch.count_nonzero(delta_W).item()/delta_W.numel()))
                     self.sparsity_delta_W = (torch.count_nonzero(delta_W).item()/delta_W.numel())
-                    self.first_run_flag = False
+                    # self.first_run_flag = False
                     
                 else:
                     x = dropout(x)
