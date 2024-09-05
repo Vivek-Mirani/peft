@@ -418,7 +418,7 @@ class Linear(nn.Module, LoraLayer):
         )
         self.is_target_conv_1d_layer = is_target_conv_1d_layer
         self.total_forward_pass_time = 0.0
-        first_run_flag = True
+        self.first_run_flag = True
 
     def merge(self, safe_merge: bool = False, adapter_names: Optional[list[str]] = None) -> None:
         """
@@ -580,9 +580,9 @@ class Linear(nn.Module, LoraLayer):
                 
                 if not self.use_dora[active_adapter]:
                     delta_W = lora_B(lora_A(dropout(x))) * scaling
-                    if first_run_flag:
+                    if self.first_run_flag:
                         print('sparsity/delta_W: ', (torch.count_nonzero(delta_W).item()/delta_W.numel()))
-                        first_run_flag = False
+                        self.first_run_flag = False
                     result = result + delta_W
                     
                 else:
