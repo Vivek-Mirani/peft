@@ -580,10 +580,12 @@ class Linear(nn.Module, LoraLayer):
                 
                 if not self.use_dora[active_adapter]:
                     delta_W = lora_B(lora_A(dropout(x))) * scaling
+                    result = result + delta_W
                     if self.first_run_flag:
+                        print('active_adapter: ', active_adapter)
+                        print('delta_w: ', delta_W)
                         print('sparsity/delta_W: ', (torch.count_nonzero(delta_W).item()/delta_W.numel()))
                         self.first_run_flag = False
-                    result = result + delta_W
                     
                 else:
                     x = dropout(x)
