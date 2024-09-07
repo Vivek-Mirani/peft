@@ -393,7 +393,6 @@ class Linear(nn.Module, LoraLayer):
     def __init__(
         self,
         base_layer,
-        peft_config,
         adapter_name: str,
         r: int = 0,
         lora_alpha: int = 1,
@@ -406,7 +405,7 @@ class Linear(nn.Module, LoraLayer):
         **kwargs,
     ) -> None:
         super().__init__()
-        LoraLayer.__init__(self, base_layer, peft_config=peft_config, **kwargs)
+        LoraLayer.__init__(self, base_layer, **kwargs)
         self.fan_in_fan_out = fan_in_fan_out
         self.sparsity_delta_W = 0.0
 
