@@ -400,6 +400,7 @@ class Linear(nn.Module, LoraLayer):
         self,
         base_layer,
         adapter_name: str,
+        lora_config: LoraConfig,
         r: int = 0,
         lora_alpha: int = 1,
         lora_dropout: float = 0.0,
@@ -408,7 +409,6 @@ class Linear(nn.Module, LoraLayer):
         init_lora_weights: Union[bool, str] = True,
         use_rslora: bool = False,
         use_dora: bool = False,
-        lora_config: LoraConfig,
         **kwargs,
     ) -> None:
         super().__init__()
