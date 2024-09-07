@@ -129,9 +129,9 @@ class LoraLayer(BaseTunerLayer):
         # Assuming in_features == out_features
         # mask_B = mask_A.T
         if hasattr(lora_config, 'mask') and lora_config.mask is not None:
-            mask_A = lora_config.mask
+            mask_A = lora_config.mask.bool()
             self.sparsity_mask = 1.0-(torch.count_nonzero(mask_A).item()/mask_A.numel())
-            mask_B = mask_A.T  # Assuming you want mask_B to be the transpose of mask_A
+            mask_B = mask_A.T.bool()  # Assuming you want mask_B to be the transpose of mask_A
         else:
             raise ValueError("Mask not provided in LoraConfigWithMask")
             
