@@ -39,9 +39,8 @@ class LoraLayer(BaseTunerLayer):
     # All names of other parameters that may contain adapter-related parameters
     other_param_names = ("r", "lora_alpha", "scaling", "lora_dropout")
 
-    def __init__(self, base_layer: nn.Module, peft_config: LoraConfigWithMask, ephemeral_gpu_offload: bool = False, **kwargs) -> None:
+    def __init__(self, base_layer: nn.Module, ephemeral_gpu_offload: bool = False, **kwargs) -> None:
         self.base_layer = base_layer
-        self.peft_config = peft_config
         self.r = {}
         self.lora_alpha = {}
         self.scaling = {}
@@ -124,9 +123,8 @@ class LoraLayer(BaseTunerLayer):
         device = self.lora_A[adapter_name].weight.device
 
         mask_percentage = 90
-        # torch.manual_seed(42)
-        # mask_A = (torch.rand(r, self.in_features) > mask_percentage / 100)
-        mask_A = self.peft_config.mask
+        torch.manual_seed(42)
+        mask_A = (torch.rand(r, self.in_features) > mask_percentage / 100)
         # Assuming in_features == out_features
         mask_B = mask_A.T
         self.lora_A[adapter_name].weight.data[~mask_A] = 0
