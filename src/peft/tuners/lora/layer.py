@@ -591,7 +591,7 @@ class Linear(nn.Module, LoraLayer):
                     # self.sparsity_lora = 1.0-(torch.count_nonzero(lora_A(dropout(x))).item()/lora_A(dropout(x)).numel())
                     delta_W = lora_B(lora_A(dropout(x))) * scaling
                     result = result + delta_W
-                    print('result: ', result)
+                    # print('result: ', result)
                     self.sparsity_delta_W = 1.0-(torch.count_nonzero(delta_W).item()/delta_W.numel())
                 else:
                     x = dropout(x)
