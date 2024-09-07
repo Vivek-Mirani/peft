@@ -587,7 +587,7 @@ class Linear(nn.Module, LoraLayer):
                 x = x.to(lora_A.weight.dtype)
 
                 if not self.use_dora[active_adapter]:
-                    self.sparsity_lora = 1.0-(torch.count_nonzero(lora_A).item()/lora_A.numel())
+                    self.sparsity_lora = 1.0-(torch.count_nonzero(lora_A(dropout(x))).item()/lora_A(dropout(x)).numel())
                     delta_W = lora_B(lora_A(dropout(x))) * scaling
                     result = result + delta_W
                     self.sparsity_delta_W = 1.0-(torch.count_nonzero(delta_W).item()/delta_W.numel())
