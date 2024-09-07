@@ -102,7 +102,7 @@ class LoraLayer(BaseTunerLayer):
         self.out_features = out_features
 
     def update_layer(
-        self, adapter_name, r, lora_alpha, lora_dropout, init_lora_weights, use_rslora, use_dora: bool = False
+        self, adapter_name, r, lora_alpha, lora_dropout, init_lora_weights, use_rslora, lora_config, use_dora: bool = False
     ):
         # This code works for linear layers, override for other layer types
         if r <= 0:
@@ -122,11 +122,17 @@ class LoraLayer(BaseTunerLayer):
 
         device = self.lora_A[adapter_name].weight.device
 
-        mask_percentage = 90
-        torch.manual_seed(42)
-        mask_A = (torch.rand(r, self.in_features) > mask_percentage / 100)
+        # mask_percentage = 90
+        # torch.manual_seed(42)
+        # mask_A = (torch.rand(r, self.in_features) > mask_percentage / 100)
         # Assuming in_features == out_features
-        mask_B = mask_A.T
+        # mask_B = mask_A.T
+        if hasattr(lora_config, 'mask') and lora_config.mask is not None:
+            mask_A = lora_config.mask
+            mask_B = mask_A.T  # Assuming you want mask_B to be the transpose of mask_A
+        else:
+            raise ValueError("Mask not provided in LoraConfigWithMask")
+            
         self.lora_A[adapter_name].weight.data[~mask_A] = 0
         self.lora_B[adapter_name].weight.data[~mask_B] = 0
 
