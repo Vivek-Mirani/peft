@@ -58,6 +58,7 @@ class LoraLayer(BaseTunerLayer):
         self._caches: dict[str, Any] = {}
         self.ephemeral_gpu_offload: bool = ephemeral_gpu_offload
         self.kwargs = kwargs
+        self.sparsity_mask = 0.0
 
         base_layer = self.get_base_layer()
         if isinstance(base_layer, nn.Linear):
@@ -129,6 +130,7 @@ class LoraLayer(BaseTunerLayer):
         # mask_B = mask_A.T
         if hasattr(lora_config, 'mask') and lora_config.mask is not None:
             mask_A = lora_config.mask
+            self.sparsity_mask = 1.0-(torch.count_nonzero(mask_A).item()/mask_A.numel())
             mask_B = mask_A.T  # Assuming you want mask_B to be the transpose of mask_A
         else:
             raise ValueError("Mask not provided in LoraConfigWithMask")
@@ -412,6 +414,7 @@ class Linear(nn.Module, LoraLayer):
         LoraLayer.__init__(self, base_layer, **kwargs)
         self.fan_in_fan_out = fan_in_fan_out
         self.sparsity_delta_W = 0.0
+        self.sparsity_lora = 0.0
 
         self._active_adapter = adapter_name
         self.update_layer(
@@ -582,6 +585,7 @@ class Linear(nn.Module, LoraLayer):
                 x = x.to(lora_A.weight.dtype)
 
                 if not self.use_dora[active_adapter]:
+                    self.sparsity_lora = 1.0-(torch.count_nonzero(lora_A).item()/lora_A.numel())
                     delta_W = lora_B(lora_A(dropout(x))) * scaling
                     result = result + delta_W
                     self.sparsity_delta_W = 1.0-(torch.count_nonzero(delta_W).item()/delta_W.numel())
