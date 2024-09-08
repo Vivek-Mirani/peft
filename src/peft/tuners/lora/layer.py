@@ -416,7 +416,7 @@ class Linear(nn.Module, LoraLayer):
         LoraLayer.__init__(self, base_layer, **kwargs)
         self.fan_in_fan_out = fan_in_fan_out
         self.sparsity_delta_W = 0.0
-        # self.sparsity_lora = 0.0
+        self.sparsity_lora = 0.0
 
         self._active_adapter = adapter_name
         self.update_layer(
@@ -588,7 +588,7 @@ class Linear(nn.Module, LoraLayer):
                 x = x.to(lora_A.weight.dtype)
 
                 if not self.use_dora[active_adapter]:
-                    # self.sparsity_lora = 1.0-(torch.count_nonzero(lora_A(dropout(x))).item()/lora_A(dropout(x)).numel())
+                    self.sparsity_lora = 1.0-(torch.count_nonzero(lora_A(dropout(x))).item()/lora_A(dropout(x)).numel())
                     delta_W = lora_B(lora_A(dropout(x))) * scaling
                     result = result + delta_W
                     # print('result: ', result)
