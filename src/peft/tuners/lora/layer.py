@@ -182,13 +182,13 @@ class LoraLayer(BaseTunerLayer):
 
         self.set_adapter(self.active_adapters)
 
-    def kaiming_init_1d(self, tensor, a=0, mode='fan_in', nonlinearity='leaky_relu'):
-        fan = tensor.size(0)  # Since it's 1D, take the size of the tensor directly
-        gain = nn.init.calculate_gain(nonlinearity, a)
-        std = gain / math.sqrt(fan)
-        bound = math.sqrt(3.0) * std  # Calculate the bound for uniform distribution
-        with torch.no_grad():
-            tensor.uniform_(-bound, bound)
+    # def kaiming_init_1d(self, tensor, a=0, mode='fan_in', nonlinearity='leaky_relu'):
+    #     fan = tensor.size(0)  # Since it's 1D, take the size of the tensor directly
+    #     gain = nn.init.calculate_gain(nonlinearity, a)
+    #     std = gain / math.sqrt(fan)
+    #     bound = math.sqrt(3.0) * std  # Calculate the bound for uniform distribution
+    #     with torch.no_grad():
+    #         tensor.uniform_(-bound, bound)
     
     def reset_lora_parameters(self, adapter_name, init_lora_weights):
         if init_lora_weights is False:
@@ -198,8 +198,8 @@ class LoraLayer(BaseTunerLayer):
             if init_lora_weights is True:
                 # initialize A the same way as the default for nn.Linear and B to zero
                 # https://github.com/microsoft/LoRA/blob/a0a92e0f26c067cf94747bdbf1ce73793fa44d19/loralib/layers.py#L124
-                # nn.init.kaiming_uniform_(self.lora_A[adapter_name], a=math.sqrt(5))
-                self.kaiming_init_1d(self.lora_A[adapter_name], a=math.sqrt(5))
+                nn.init.kaiming_uniform_(self.lora_A[adapter_name].unsqueeze(1), a=math.sqrt(5))
+                # self.kaiming_init_1d(self.lora_A[adapter_name], a=math.sqrt(5))
             elif init_lora_weights.lower() == "gaussian":
                 nn.init.normal_(self.lora_A[adapter_name], std=1 / self.r[adapter_name])
             else:
