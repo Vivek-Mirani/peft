@@ -634,11 +634,10 @@ class Linear(nn.Module, LoraLayer):
                 x = x.to(lora_A.dtype)
 
                 if not self.use_dora[active_adapter]:
-                    self.sparsity_lora = 1.0 - (torch.count_nonzero(lora_A).item() / lora_A.numel())
+                    self.sparsity_lora = 1.0 - (torch.count_nonzero(lora_B).item() / lora_B.numel())
                     intermediate = torch.matmul(dropout_x, lora_A.T)  # Shape: (batch_size, sequence_length, rank)
                     delta_W = torch.matmul(intermediate, lora_B.T) * scaling  # Shape: (batch_size, sequence_length, hidden_size)
                     result = result + delta_W
-                    print(result)
                     self.sparsity_delta_W = 1.0-(torch.count_nonzero(delta_W).item()/delta_W.numel())
                 else:
                     x = dropout(x)
