@@ -60,8 +60,8 @@ class LoraLayer(BaseTunerLayer):
         self.ephemeral_gpu_offload: bool = ephemeral_gpu_offload
         self.kwargs = kwargs
         self.mask_percentage = 90
-        self.mask_A = {}
-        self.mask_B = {}
+        # self.mask_A = {}
+        # self.mask_B = {}
         self.lora_A = nn.ParameterDict({})
         self.lora_B = nn.ParameterDict({})
         self.lora_A_non_trainable = {}
@@ -110,7 +110,7 @@ class LoraLayer(BaseTunerLayer):
         self.out_features = out_features
 
     def update_layer(
-        self, adapter_name, r, lora_alpha, lora_dropout, init_lora_weights, use_rslora, use_dora: bool = False
+        self, adapter_name, r, lora_alpha, lora_dropout, init_lora_weights, use_rslora, lora_config, use_dora: bool = False
     ):
         # This code works for linear layers, override for other layer types
         if r <= 0:
@@ -129,9 +129,15 @@ class LoraLayer(BaseTunerLayer):
         # self.lora_B[adapter_name] = nn.Linear(r, self.out_features, bias=False)
         
         # Initialize the mask
-        torch.manual_seed(42)
-        self.mask_A[adapter_name] = (torch.rand(r, self.in_features) > self.mask_percentage / 100)
-        self.mask_B[adapter_name] = (torch.rand(self.out_features, r) > self.mask_percentage / 100)
+        # torch.manual_seed(42)
+        # self.mask_A[adapter_name] = (torch.rand(r, self.in_features) > self.mask_percentage / 100)
+        # self.mask_B[adapter_name] = (torch.rand(self.out_features, r) > self.mask_percentage / 100)
+        if hasattr(lora_config, 'mask') and lora_config.mask is not None:
+            mask_A = lora_config.mask.bool()
+            self.sparsity_mask = 1.0-(torch.count_nonzero(mask_A).item()/mask_A.numel())
+            mask_B = mask_A.T.bool()  # Assuming you want mask_B to be the transpose of mask_A
+        else:
+            raise ValueError("Mask not provided in LoraConfigWithMask")
 
         # Initialize full A and B matrices
         A_full = torch.randn(r, self.in_features)
@@ -141,8 +147,10 @@ class LoraLayer(BaseTunerLayer):
         print("B full - ", B_full)
 
         # Split into trainable and non-trainable parts
-        self.lora_A[adapter_name] = nn.Parameter(A_full[self.mask_A[adapter_name] == 1])
-        self.lora_B[adapter_name] = nn.Parameter(B_full[self.mask_B[adapter_name] == 1])
+        # self.lora_A[adapter_name] = nn.Parameter(A_full[self.mask_A[adapter_name] == 1])
+        # self.lora_B[adapter_name] = nn.Parameter(B_full[self.mask_B[adapter_name] == 1])
+        self.lora_A[adapter_name] = nn.Parameter(A_full[self.mask_A[adapter_name]])
+        self.lora_B[adapter_name] = nn.Parameter(B_full[self.mask_B[adapter_name]])
         print("Shape: ", self.lora_A[adapter_name].shape)
         
         print("Masked A - ", self.lora_A[adapter_name].data)
@@ -186,7 +194,7 @@ class LoraLayer(BaseTunerLayer):
     #     fan = tensor.size(0)  # Since it's 1D, take the size of the tensor directly
     #     gain = nn.init.calculate_gain(nonlinearity, a)
     #     std = gain / math.sqrt(fan)
-    #     bound = math.sqrt(3.0) * std  # Calculate the bound for uniform distribution
+    #     bound = math.sqrt(5.0) * std  # Calculate the bound for uniform distribution
     #     with torch.no_grad():
     #         tensor.uniform_(-bound, bound)
     
@@ -419,6 +427,7 @@ class Linear(nn.Module, LoraLayer):
         self,
         base_layer,
         adapter_name: str,
+        lora_config: LoraConfig,
         r: int = 0,
         lora_alpha: int = 1,
         lora_dropout: float = 0.0,
@@ -432,6 +441,8 @@ class Linear(nn.Module, LoraLayer):
         super().__init__()
         LoraLayer.__init__(self, base_layer, **kwargs)
         self.fan_in_fan_out = fan_in_fan_out
+        self.sparsity_delta_W = 0.0
+        self.sparsity_lora = 0.0
 
         self._active_adapter = adapter_name
         self.update_layer(
@@ -441,6 +452,7 @@ class Linear(nn.Module, LoraLayer):
             lora_dropout=lora_dropout,
             init_lora_weights=init_lora_weights,
             use_rslora=use_rslora,
+            lora_config=lora_config,
             use_dora=use_dora,
         )
         self.is_target_conv_1d_layer = is_target_conv_1d_layer
@@ -621,15 +633,11 @@ class Linear(nn.Module, LoraLayer):
                 x = x.to(lora_A.dtype)
 
                 if not self.use_dora[active_adapter]:
-                    # result = result + lora_B(lora_A(dropout(x))) * scaling
-                    # result = result + torch.matmul(lora_B, torch.matmul(lora_A, dropout(x).T)).T * scaling
-                    # intermediate = torch.matmul(lora_A, dropout_x_reshaped.T)  # Shape: (rank, batch_size)
-                    # output = torch.matmul(lora_B, intermediate)  # Shape: (out_features, batch_size)
-                    # output = output.T
+                    self.sparsity_lora = 1.0-(torch.count_nonzero(lora_A(dropout(x))).item()/lora_A(dropout(x)).numel())
                     intermediate = torch.matmul(dropout_x, lora_A.T)  # Shape: (batch_size, sequence_length, rank)
                     output = torch.matmul(intermediate, lora_B.T)  # Shape: (batch_size, sequence_length, hidden_size)
                     result = result + output * scaling
-
+                    self.sparsity_delta_W = 1.0-(torch.count_nonzero(delta_W).item()/delta_W.numel())
                 else:
                     x = dropout(x)
                     result = result + self.lora_magnitude_vector[active_adapter](
@@ -1164,7 +1172,7 @@ def dispatch_default(
             )
             kwargs["fan_in_fan_out"] = lora_config.fan_in_fan_out = False
         kwargs.update(lora_config.loftq_config)
-        new_module = Linear(target, adapter_name, **kwargs)
+        new_module = Linear(target, adapter_name, lora_config, **kwargs)
     elif isinstance(target_base_layer, Conv1D):
         if not kwargs["fan_in_fan_out"]:
             warnings.warn(
@@ -1172,6 +1180,6 @@ def dispatch_default(
             )
             kwargs["fan_in_fan_out"] = lora_config.fan_in_fan_out = True
         kwargs.update(lora_config.loftq_config)
-        new_module = Linear(target, adapter_name, is_target_conv_1d_layer=True, **kwargs)
+        new_module = Linear(target, adapter_name, lora_config, is_target_conv_1d_layer=True, **kwargs)
 
     return new_module
