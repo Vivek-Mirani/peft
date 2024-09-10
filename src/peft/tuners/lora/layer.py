@@ -143,8 +143,10 @@ class LoraLayer(BaseTunerLayer):
         A_full = torch.randn(r, self.in_features)
         B_full = torch.zeros(self.out_features, r)
 
-        print("A full - ", A_full)
-        print("B full - ", B_full)
+        # print("A full - ", A_full)
+        # print("B full - ", B_full)
+        print("Mask A: ", self.mask_A)
+        print("Mask B: ", self.mask_B)
 
         # Split into trainable and non-trainable parts
         # self.lora_A[adapter_name] = nn.Parameter(A_full[self.mask_A[adapter_name] == 1])
