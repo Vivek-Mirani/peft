@@ -638,6 +638,7 @@ class Linear(nn.Module, LoraLayer):
                     intermediate = torch.matmul(dropout_x, lora_A.T)  # Shape: (batch_size, sequence_length, rank)
                     delta_W = torch.matmul(intermediate, lora_B.T) * scaling  # Shape: (batch_size, sequence_length, hidden_size)
                     result = result + delta_W
+                    print(result)
                     self.sparsity_delta_W = 1.0-(torch.count_nonzero(delta_W).item()/delta_W.numel())
                 else:
                     x = dropout(x)
