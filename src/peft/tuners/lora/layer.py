@@ -595,8 +595,8 @@ class Linear(nn.Module, LoraLayer):
         W_a_full = self.lora_A_non_trainable[active_adapter].clone().to(self.lora_A[active_adapter].device)
         W_b_full = self.lora_B_non_trainable[active_adapter].clone().to(self.lora_B[active_adapter].device)
 
-        W_a_full[self.mask_A[active_adapter]] = self.lora_A[active_adapter]
-        W_b_full[self.mask_B[active_adapter]] = self.lora_B[active_adapter]
+        W_a_full[self.mask_A] = self.lora_A[active_adapter]
+        W_b_full[self.mask_B] = self.lora_B[active_adapter]
 
         return W_a_full, W_b_full
 
