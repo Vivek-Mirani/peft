@@ -133,7 +133,7 @@ class LoraLayer(BaseTunerLayer):
         # self.mask_A[adapter_name] = (torch.rand(r, self.in_features) > self.mask_percentage / 100)
         # self.mask_B[adapter_name] = (torch.rand(self.out_features, r) > self.mask_percentage / 100)
         if hasattr(lora_config, 'mask') and lora_config.mask is not None:
-            aelf.mask_A = lora_config.mask.bool()
+            self.mask_A = lora_config.mask.bool()
             self.sparsity_mask = 1.0-(torch.count_nonzero(self.mask_A).item()/self.mask_A.numel())
             self.mask_B = self.mask_A.T.bool()  # Assuming you want mask_B to be the transpose of mask_A
         else:
