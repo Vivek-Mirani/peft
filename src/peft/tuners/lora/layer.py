@@ -60,8 +60,8 @@ class LoraLayer(BaseTunerLayer):
         self.ephemeral_gpu_offload: bool = ephemeral_gpu_offload
         self.kwargs = kwargs
         self.mask_percentage = 90
-        # self.mask_A = {}
-        # self.mask_B = {}
+        self.mask_A = {}
+        self.mask_B = {}
         self.lora_A = nn.ParameterDict({})
         self.lora_B = nn.ParameterDict({})
         self.lora_A_non_trainable = {}
@@ -133,9 +133,9 @@ class LoraLayer(BaseTunerLayer):
         # self.mask_A[adapter_name] = (torch.rand(r, self.in_features) > self.mask_percentage / 100)
         # self.mask_B[adapter_name] = (torch.rand(self.out_features, r) > self.mask_percentage / 100)
         if hasattr(lora_config, 'mask') and lora_config.mask is not None:
-            mask_A = lora_config.mask.bool()
-            self.sparsity_mask = 1.0-(torch.count_nonzero(mask_A).item()/mask_A.numel())
-            mask_B = mask_A.T.bool()  # Assuming you want mask_B to be the transpose of mask_A
+            aelf.mask_A = lora_config.mask.bool()
+            self.sparsity_mask = 1.0-(torch.count_nonzero(self.mask_A).item()/self.mask_A.numel())
+            self.mask_B = self.mask_A.T.bool()  # Assuming you want mask_B to be the transpose of mask_A
         else:
             raise ValueError("Mask not provided in LoraConfigWithMask")
 
