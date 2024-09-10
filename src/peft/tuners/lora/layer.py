@@ -622,24 +622,20 @@ class Linear(nn.Module, LoraLayer):
                     continue
 
                 W_a_full, W_b_full = self.reconstruct_weights(active_adapter)
-
                 # self.lora_A[active_adapter].weight.data *= self.mask_A[active_adapter].to(self.lora_A[active_adapter].weight.device)
                 # self.lora_B[active_adapter].weight.data *= self.mask_B[active_adapter].to(self.lora_B[active_adapter].weight.device)
-                
                 lora_A = W_a_full # self.lora_A[active_adapter]
                 lora_B = W_b_full # self.lora_B[active_adapter]
                 dropout = self.lora_dropout[active_adapter]
-                # dropout_x_reshaped = dropout(x).view(-1, 768)  # Ensure the dimensions are compatible
-                # print("dropout_x_rephased shape: ", dropout_x_reshaped.shape)
                 dropout_x = dropout(x) 
                 scaling = self.scaling[active_adapter]
                 x = x.to(lora_A.dtype)
 
                 if not self.use_dora[active_adapter]:
-                    self.sparsity_lora = 1.0-(torch.count_nonzero(lora_A(dropout(x))).item()/lora_A(dropout(x)).numel())
+                    self.sparsity_lora = 1.0 - (torch.count_nonzero(lora_A).item() / lora_A.numel())
                     intermediate = torch.matmul(dropout_x, lora_A.T)  # Shape: (batch_size, sequence_length, rank)
-                    output = torch.matmul(intermediate, lora_B.T)  # Shape: (batch_size, sequence_length, hidden_size)
-                    result = result + output * scaling
+                    delta_W = torch.matmul(intermediate, lora_B.T) * scaling  # Shape: (batch_size, sequence_length, hidden_size)
+                    result = result + delta_W
                     self.sparsity_delta_W = 1.0-(torch.count_nonzero(delta_W).item()/delta_W.numel())
                 else:
                     x = dropout(x)
