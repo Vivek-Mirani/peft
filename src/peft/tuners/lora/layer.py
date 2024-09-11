@@ -29,8 +29,8 @@ from peft.utils.other import transpose
 
 from .config import LoraConfig
 from .dora import DoraConv2dLayer, DoraLinearLayer
-torch.cuda.manual_seed_all(42)
-torch.manual_seed(42)
+torch.cuda.manual_seed_all(0)
+torch.manual_seed(0)
 
 import time
 
@@ -129,7 +129,7 @@ class LoraLayer(BaseTunerLayer):
         # self.lora_B[adapter_name] = nn.Linear(r, self.out_features, bias=False)
         
         # Initialize the mask
-        # torch.manual_seed(42)
+        # torch.manual_seed(0)
         # self.mask_A[adapter_name] = (torch.rand(r, self.in_features) > self.mask_percentage / 100)
         # self.mask_B[adapter_name] = (torch.rand(self.out_features, r) > self.mask_percentage / 100)
         if hasattr(lora_config, 'mask') and lora_config.mask is not None:
