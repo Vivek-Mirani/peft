@@ -561,13 +561,17 @@ class Linear(nn.Module, LoraLayer):
                 x = x.to(lora_A.weight.dtype)
                 batch_size, seq_len, feature_dim = x.shape
                 torch.manual_seed(0)
-                self.mask_W[active_adapter] = (torch.rand(batch_size, seq_len, self.out_features) > self.mask_percentage / 100).to(x.device)
+                self.mask_W[active_adapter] = (torch.rand(self.in_features, self.out_features) > self.mask_percentage / 100).to(x.device)
 
                 if not self.use_dora[active_adapter]:
-                    masked_output = self.mask_W[active_adapter] * lora_B(lora_A(dropout(x)))
-                    print(masked_output)
-                    print("Sparsity - ", 1-(torch.count_nonzero(masked_output).item()/masked_output.numel()))
-                    result = result + masked_output * scaling
+                    delta_W = torch.matmul(lora_B, lora_A)
+                    masked_delta_W = self.mask_W[active_adapter] * delta_W
+                    intermediate = torch.matmul(masked_delta_W, dropout_x)  # Shape: (batch_size, sequence_length, rank)
+                    result = result + intermediate
+                    # masked_output = self.mask_W[active_adapter] * lora_B(lora_A(dropout(x)))
+                    # print(masked_output)
+                    print("Sparsity - ", 1-(torch.count_nonzero(masked_delta_W).item()/masked_delta_W.numel()))
+                    # result = result + masked_output * scaling
                 else:
                     x = dropout(x)
                     result = result + self.lora_magnitude_vector[active_adapter](
