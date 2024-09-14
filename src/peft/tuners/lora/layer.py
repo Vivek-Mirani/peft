@@ -58,7 +58,7 @@ class LoraLayer(BaseTunerLayer):
         self._caches: dict[str, Any] = {}
         self.ephemeral_gpu_offload: bool = ephemeral_gpu_offload
         self.kwargs = kwargs
-        self.mask_percentage = 60
+        self.mask_percentage = 75
         self.mask_W = {}
 
         base_layer = self.get_base_layer()
