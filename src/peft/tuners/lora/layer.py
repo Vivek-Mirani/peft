@@ -110,7 +110,7 @@ class LoraLayer(BaseTunerLayer):
         self.out_features = out_features
 
     def update_layer(
-        self, adapter_name, r, lora_alpha, lora_dropout, init_lora_weights, use_rslora, use_dora: bool = False
+        self, adapter_name, r, lora_alpha, lora_dropout, init_lora_weights, use_rslora, mask_A, mask_B, use_dora: bool = False
     ):
         # This code works for linear layers, override for other layer types
         if r <= 0:
@@ -129,10 +129,9 @@ class LoraLayer(BaseTunerLayer):
         # self.lora_B[adapter_name] = nn.Linear(r, self.out_features, bias=False)
         
         # Initialize the mask
-        torch.manual_seed(42)
-        self.mask_A[adapter_name] = (torch.rand(r, self.in_features) > self.mask_percentage / 100)
-        self.mask_B[adapter_name] = (torch.rand(self.out_features, r) > self.mask_percentage / 100)
-
+        self.mask_A[adapter_name] = mask_A
+        self.mask_B[adapter_name] = mask_B
+        
         # Initialize full A and B matrices
         A_full = torch.randn(r, self.in_features)
         B_full = torch.zeros(self.out_features, r)
@@ -427,6 +426,8 @@ class Linear(nn.Module, LoraLayer):
         init_lora_weights: Union[bool, str] = True,
         use_rslora: bool = False,
         use_dora: bool = False,
+        mask_A: torch.Tensor = None,
+        mask_B: torch.Tensor = None,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -441,6 +442,8 @@ class Linear(nn.Module, LoraLayer):
             lora_dropout=lora_dropout,
             init_lora_weights=init_lora_weights,
             use_rslora=use_rslora,
+            mask_A=mask_A,
+            mask_B=mask_B,
             use_dora=use_dora,
         )
         self.is_target_conv_1d_layer = is_target_conv_1d_layer
