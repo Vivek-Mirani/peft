@@ -564,9 +564,9 @@ class Linear(nn.Module, LoraLayer):
                 self.mask_W[active_adapter] = (torch.rand(self.in_features, self.out_features) > self.mask_percentage / 100).to(x.device)
 
                 if not self.use_dora[active_adapter]:
-                    delta_W = torch.matmul(lora_B, lora_A)
+                    delta_W = torch.matmul(lora_B.weight, lora_A.weight)
                     masked_delta_W = self.mask_W[active_adapter] * delta_W
-                    intermediate = torch.matmul(masked_delta_W, dropout_x)  # Shape: (batch_size, sequence_length, rank)
+                    intermediate = torch.matmul(masked_delta_W, dropout(x))  # Shape: (batch_size, sequence_length, rank)
                     result = result + intermediate
                     # masked_output = self.mask_W[active_adapter] * lora_B(lora_A(dropout(x)))
                     print(masked_delta_W)
