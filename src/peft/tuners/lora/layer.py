@@ -566,7 +566,7 @@ class Linear(nn.Module, LoraLayer):
                 if not self.use_dora[active_adapter]:
                     delta_W = torch.matmul(lora_B.weight, lora_A.weight)
                     masked_delta_W = self.mask_W[active_adapter] * delta_W
-                    intermediate = torch.matmul(masked_delta_W, dropout(x))  # Shape: (batch_size, sequence_length, rank)
+                    intermediate = masked_delta_W(dropout(x)  # Shape: (batch_size, sequence_length, rank)
                     result = result + intermediate
                     # masked_output = self.mask_W[active_adapter] * lora_B(lora_A(dropout(x)))
                     print(masked_delta_W)
