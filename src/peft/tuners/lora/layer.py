@@ -129,8 +129,8 @@ class LoraLayer(BaseTunerLayer):
         # self.lora_B[adapter_name] = nn.Linear(r, self.out_features, bias=False)
         
         # Initialize the mask
-        self.mask_A[adapter_name] = mask_A.bool()
-        self.mask_B[adapter_name] = mask_A.T.bool()
+        self.mask_A[adapter_name] = mask_A
+        self.mask_B[adapter_name] = mask_A.T
         print('mask A: ', self.mask_A[adapter_name])
         print('mask B: ', self.mask_B[adapter_name])
         
