@@ -129,8 +129,10 @@ class LoraLayer(BaseTunerLayer):
         # self.lora_B[adapter_name] = nn.Linear(r, self.out_features, bias=False)
         
         # Initialize the mask
-        self.mask_A[adapter_name] = mask_A
-        self.mask_B[adapter_name] = mask_B
+        self.mask_A[adapter_name] = mask_A.bool()
+        self.mask_B[adapter_name] = mask_A.T.bool()
+        print('mask A: ', self.mask_A[adapter_name])
+        print('mask B: ', self.mask_B[adapter_name])
         
         # Initialize full A and B matrices
         A_full = torch.randn(r, self.in_features)
@@ -142,7 +144,7 @@ class LoraLayer(BaseTunerLayer):
         # Split into trainable and non-trainable parts
         self.lora_A[adapter_name] = nn.Parameter(A_full[self.mask_A[adapter_name] == 1])
         self.lora_B[adapter_name] = nn.Parameter(B_full[self.mask_B[adapter_name] == 1])
-        print("Shape: ", self.lora_A[adapter_name].shape)
+        # print("Shape: ", self.lora_A[adapter_name].shape)
         
         print("Masked A - ", self.lora_A[adapter_name].data)
         print("Masked B - ", self.lora_B[adapter_name].data)
