@@ -242,6 +242,14 @@ class LoraConfig(PeftConfig):
             )
         },
     )
+    mask_A: Optional[torch.Tensor] = field(
+        default=None,
+        metadata={"help": "Mask tensor for A matrix in LoRA."}
+    )
+    mask_B: Optional[torch.Tensor] = field(
+        default=None,
+        metadata={"help": "Mask tensor for B matrix in LoRA."}
+    )
     megatron_config: Optional[dict] = field(
         default=None,
         metadata={
