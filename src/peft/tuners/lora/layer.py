@@ -569,7 +569,7 @@ class Linear(nn.Module, LoraLayer):
                     intermediate = torch.matmul(masked_delta_W, dropout_x)  # Shape: (batch_size, sequence_length, rank)
                     result = result + intermediate
                     # masked_output = self.mask_W[active_adapter] * lora_B(lora_A(dropout(x)))
-                    # print(masked_output)
+                    print(masked_delta_W)
                     print("Sparsity - ", 1-(torch.count_nonzero(masked_delta_W).item()/masked_delta_W.numel()))
                     # result = result + masked_output * scaling
                 else:
