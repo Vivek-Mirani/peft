@@ -32,6 +32,9 @@ from .dora import DoraConv2dLayer, DoraLinearLayer
 
 import time
 
+torch.manual_seed(42)
+torch.cuda.manual_seed_all(42)
+
 
 class LoraLayer(BaseTunerLayer):
     # All names of layers that may contain (trainable) adapter weights
@@ -119,8 +122,24 @@ class LoraLayer(BaseTunerLayer):
 
         self.lora_dropout.update(nn.ModuleDict({adapter_name: lora_dropout_layer}))
         # Actual trainable parameters
-        self.lora_A[adapter_name] = nn.Linear(self.in_features, r, bias=False)
-        self.lora_B[adapter_name] = nn.Linear(r, self.out_features, bias=False)
+        # self.lora_A[adapter_name] = nn.Linear(self.in_features, r, bias=False)
+        # self.lora_B[adapter_name] = nn.Linear(r, self.out_features, bias=False)
+
+        # Initialize the mask
+        self.mask_W[adapter_name] = (torch.rand(self.in_features, self.out_features) > self.mask_percentage / 100)
+        
+        # Initialize full A and B matrices
+        deltaW_full = torch.zeros(self.in_features, self.out_features)
+        
+        # Split into trainable and non-trainable parts
+        self.lora_A[adapter_name] = nn.Parameter(deltaW_full[self.mask_W[adapter_name] == 1])
+        self.lora_B[adapter_name] = None
+        print("Shape: ", self.lora_A[adapter_name].shape)
+        
+        # print("Masked A - ", self.lora_A[adapter_name].data)
+        
+        self.delta_W_non_trainable[adapter_name] = A_full.clone()
+        
         if use_rslora:
             self.scaling[adapter_name] = lora_alpha / math.sqrt(r)
         else:
@@ -150,6 +169,7 @@ class LoraLayer(BaseTunerLayer):
         self.set_adapter(self.active_adapters)
 
     def reset_lora_parameters(self, adapter_name, init_lora_weights):
+        return
         if init_lora_weights is False:
             return
 
@@ -516,20 +536,20 @@ class Linear(nn.Module, LoraLayer):
         cast_to_fp32 = device.type == "cpu" and (dtype == torch.float16 or dtype == torch.bfloat16)
 
         weight_A = self.lora_A[adapter].weight
-        weight_B = self.lora_B[adapter].weight
+        # weight_B = self.lora_B[adapter].weight
 
         if cast_to_fp32:
             weight_A = weight_A.float()
-            weight_B = weight_B.float()
+            # weight_B = weight_B.float()
 
-        output_tensor = transpose(weight_B @ weight_A, self.fan_in_fan_out) * self.scaling[adapter]
+        output_tensor = weight_A # transpose(weight_B @ weight_A, self.fan_in_fan_out) * self.scaling[adapter]
 
         if cast_to_fp32:
             output_tensor = output_tensor.to(dtype=dtype)
 
             # cast back the weights
             self.lora_A[adapter].weight.data = weight_A.to(dtype)
-            self.lora_B[adapter].weight.data = weight_B.to(dtype)
+            # self.lora_B[adapter].weight.data = weight_B.to(dtype)
 
         return output_tensor
 
@@ -555,19 +575,21 @@ class Linear(nn.Module, LoraLayer):
                 if active_adapter not in self.lora_A.keys():
                     continue
                 lora_A = self.lora_A[active_adapter]
-                lora_B = self.lora_B[active_adapter]
+                # lora_B = self.lora_B[active_adapter]
                 dropout = self.lora_dropout[active_adapter]
                 scaling = self.scaling[active_adapter]
-                x = x.to(lora_A.weight.dtype)
+                # x = x.to(lora_A.weight.dtype)
                 batch_size, seq_len, feature_dim = x.shape
-                torch.manual_seed(0)
-                self.mask_W[active_adapter] = (torch.rand(self.in_features, self.out_features) > self.mask_percentage / 100).to(x.device)
+                # torch.manual_seed(0)
+                # self.mask_W[active_adapter] = (torch.rand(self.in_features, self.out_features) > self.mask_percentage / 100).to(x.device)
 
                 if not self.use_dora[active_adapter]:
-                    delta_W = torch.matmul(lora_B.weight, lora_A.weight)
-                    masked_delta_W = self.mask_W[active_adapter] * delta_W
-                    intermediate = masked_delta_W(dropout(x))  # Shape: (batch_size, sequence_length, rank)
-                    result = result + intermediate
+                    # delta_W = torch.matmul(lora_B.weight, lora_A.weight)
+                    # masked_delta_W = self.mask_W[active_adapter] * delta_W
+                    # intermediate = masked_delta_W(dropout(x))  # Shape: (batch_size, sequence_length, rank)
+                    # result = result + intermediate
+                    masked_delta_W = lora_A
+                    result = result + masked_delta_W(dropout(x))
                     # masked_output = self.mask_W[active_adapter] * lora_B(lora_A(dropout(x)))
                     print(masked_delta_W)
                     print("Sparsity - ", 1-(torch.count_nonzero(masked_delta_W).item()/masked_delta_W.numel()))
