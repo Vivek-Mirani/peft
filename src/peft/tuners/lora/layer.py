@@ -133,7 +133,7 @@ class LoraLayer(BaseTunerLayer):
         
         # Split into trainable and non-trainable parts
         self.lora_A[adapter_name] = nn.Parameter(deltaW_full[self.mask_W[adapter_name] == 1])
-        self.lora_B[adapter_name] = None
+        self.lora_B[adapter_name] = nn.Parameter(r, r, requires_grad=False)
         print("Shape: ", self.lora_A[adapter_name].shape)
         
         # print("Masked A - ", self.lora_A[adapter_name].data)
@@ -553,6 +553,13 @@ class Linear(nn.Module, LoraLayer):
 
         return output_tensor
 
+    def reconstruct_weights(self, active_adapter):
+        # Reconstruct full matrices from trainable and non-trainable parts
+        deltaW_full = self.delta_W_non_trainable[active_adapter].clone().to(self.lora_A[active_adapter].device)
+
+        deltaW_full[self.mask_W[active_adapter]] = self.lora_A[active_adapter]
+        return W_a_full
+        
     def forward(self, x: torch.Tensor, *args: Any, **kwargs: Any) -> torch.Tensor:
         self._check_forward_args(x, *args, **kwargs)
         adapter_names = kwargs.pop("adapter_names", None)
@@ -588,7 +595,7 @@ class Linear(nn.Module, LoraLayer):
                     # masked_delta_W = self.mask_W[active_adapter] * delta_W
                     # intermediate = masked_delta_W(dropout(x))  # Shape: (batch_size, sequence_length, rank)
                     # result = result + intermediate
-                    masked_delta_W = lora_A
+                    masked_delta_W = self.reconstruct_weights(active_adapter)
                     result = result + masked_delta_W(dropout(x))
                     # masked_output = self.mask_W[active_adapter] * lora_B(lora_A(dropout(x)))
                     print(masked_delta_W)
